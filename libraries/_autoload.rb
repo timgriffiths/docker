@@ -8,6 +8,8 @@ rescue LoadError
 
     docker = Chef::Resource::ChefGem.new('docker-api', run_context)
     docker.version '= 1.31.0'
+    docker.source 'http://ruby-gems-repo.tibra.com'
+    docker.clear_sources true
     docker.run_action(:install)
   end
 end
