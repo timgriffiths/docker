@@ -18,10 +18,14 @@ systemd = false if os[:family] == 'ubuntu' && os[:release].to_f < 15.04
 unless systemd
   describe file('/var/log/docker.log') do
     it { should be_file }
-    it { should be_mode 0644 }
+    it { should be_mode '0644' }
   end
 end
 
 describe kernel_parameter('net.ipv4.ip_forward') do
+  its(:value) { should eq 1 }
+end
+
+describe kernel_parameter('net.bridge.bridge-nf-call-iptables') do
   its(:value) { should eq 1 }
 end
