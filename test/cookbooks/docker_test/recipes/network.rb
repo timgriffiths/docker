@@ -1,3 +1,4 @@
+# coding: utf-8
 # pull alpine image
 docker_image 'alpine' do
   tag '3.1'
@@ -22,7 +23,7 @@ end
 docker_container 'echo-base-network_a' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 1337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '1337'
   network_mode 'network_a'
   action :run
@@ -31,7 +32,7 @@ end
 docker_container 'echo-station-network_a' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 31337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '31337'
   network_mode 'network_a'
   action :run
@@ -70,7 +71,7 @@ end
 docker_container 'echo-base-network_c' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 1337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '1337'
   network_mode 'network_c'
   action :run
@@ -79,7 +80,7 @@ end
 docker_container 'echo-station-network_c' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 31337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '31337'
   network_mode 'network_c'
   action :run
@@ -99,7 +100,7 @@ end
 docker_container 'echo-base-network_d' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 1337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '1337'
   network_mode 'network_d'
   action :run
@@ -108,7 +109,7 @@ end
 docker_container 'echo-station-network_d' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 31337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '31337'
   network_mode 'network_d'
   action :run
@@ -139,16 +140,17 @@ end
 docker_container 'echo-base-network_f' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 1337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '1337'
   network_mode 'network_f'
+  ip_address '172.28.5.5'
   action :run
 end
 
 docker_container 'echo-station-network_f' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 31337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '31337'
   network_mode 'network_f'
   action :run
@@ -170,7 +172,7 @@ end
 docker_container 'echo-base-network_g' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 1337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '1337'
   network_mode 'network_g'
   action :run
@@ -179,8 +181,47 @@ end
 docker_container 'echo-station-network_g' do
   repo 'alpine'
   tag '3.1'
-  command 'nc -ll -p 31337 -e /bin/cat'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
   port '31337'
   network_mode 'network_g'
   action :run
+end
+
+###########
+# network_h
+###########
+
+# connect same container to multiple networks
+docker_network 'network_h1' do
+  action :create
+end
+
+docker_network 'network_h2' do
+  action :create
+end
+
+docker_container 'container1-network_h' do
+  repo 'alpine'
+  tag '3.1'
+  network_mode 'network_h1'
+  command 'sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
+  not_if { ::File.exist?('/marker_network_h') }
+  action :run
+end
+
+file '/marker_network_h' do
+  action :create
+end
+
+docker_network 'network_h2 connector' do
+  container 'container1-network_h'
+  network_name 'network_h2'
+  action :connect
+end
+
+# disconnet from a network
+docker_network 'network_h1 disconnector' do
+  container 'container1-network_h'
+  network_name 'network_h1'
+  action :disconnect
 end

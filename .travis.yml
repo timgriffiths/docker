@@ -5,7 +5,7 @@ dist: trusty
 addons:
   apt:
     sources:
-      - chef-current-trusty
+      - chef-stable-trusty
     packages:
       - chefdk
 
@@ -13,12 +13,34 @@ install: echo "skip bundle install"
 
 services: docker
 
+env:
+  matrix:
+  - INSTANCE=resources-1131-ubuntu-1604
+  - INSTANCE=network-ubuntu-1604
+  - INSTANCE=volume-ubuntu-1604
+  - INSTANCE=smoke-amazonlinux
+  - INSTANCE=smoke-debian-7
+  - INSTANCE=smoke-debian-8
+  - INSTANCE=smoke-centos-7
+  - INSTANCE=smoke-fedora-latest
+  - INSTANCE=smoke-ubuntu-1204
+  - INSTANCE=smoke-ubuntu-1404
+  - INSTANCE=smoke-ubuntu-1604
+  
 # Ensure we make ChefDK's Ruby the default
 before_script:
+  - sudo iptables -L DOCKER || ( echo "DOCKER iptables chain missing" ; sudo iptables -N DOCKER )
   - eval "$(/opt/chefdk/bin/chef shell-init bash)"
+  - chef gem install kitchen-dokken
+  
+script: KITCHEN_LOCAL_YAML=.kitchen.dokken.yml /opt/chefdk/embedded/bin/kitchen verify ${INSTANCE}
 
-script:
-  - /opt/chefdk/embedded/bin/chef --version
-  - /opt/chefdk/embedded/bin/cookstyle --version
-  - /opt/chefdk/embedded/bin/bundle install
-  - /opt/chefdk/embedded/bin/bundle exec rake
+matrix:
+  include:
+    - before_script:
+      - eval "$(/opt/chefdk/bin/chef shell-init bash)"
+    - script:
+      - /opt/chefdk/embedded/bin/chef --version
+      - /opt/chefdk/embedded/bin/cookstyle --version
+      - /opt/chefdk/embedded/bin/cookstyle
+      - /opt/chefdk/embedded/bin/rspec

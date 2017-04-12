@@ -1,7 +1,8 @@
+# coding: utf-8
 require 'spec_helper'
 
 describe 'docker_test::network' do
-  cached(:chef_run) { ChefSpec::SoloRunner.converge(described_recipe) }
+  cached(:chef_run) { ChefSpec::SoloRunner.new(platform: 'ubuntu', version: '16.04').converge(described_recipe) }
 
   context 'creates a network with unicode name' do
     it 'creates docker_network_seseme_straße' do
@@ -118,6 +119,36 @@ describe 'docker_test::network' do
 
     it 'creates echo-station-network_g' do
       expect(chef_run).to run_docker_container('echo-station-network_g')
+    end
+  end
+
+  context 'connect and disconnect a container' do
+    it 'creates docker_network_h1' do
+      expect(chef_run).to create_docker_network('network_h1')
+    end
+
+    it 'creates docker_network_h2' do
+      expect(chef_run).to create_docker_network('network_h2')
+    end
+
+    it 'creates container1-network_h' do
+      expect(chef_run).to run_docker_container('container1-network_h')
+    end
+
+    it 'creates /marker/network_h' do
+      expect(chef_run).to create_file('/marker_network_h')
+    end
+
+    it 'connects container1-network_h with network_h2' do
+      expect(chef_run).to connect_docker_network('network_h2 connector').with(
+        container: 'container1-network_h'
+      )
+    end
+
+    it 'disconnects container1-network_h from network_h1' do
+      expect(chef_run).to disconnect_docker_network('network_h1 disconnector').with(
+        container: 'container1-network_h'
+      )
     end
   end
 end

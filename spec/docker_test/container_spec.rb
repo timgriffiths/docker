@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe 'docker_test::container' do
-  cached(:chef_run) { ChefSpec::SoloRunner.converge(described_recipe) }
+  cached(:chef_run) { ChefSpec::SoloRunner.new(platform: 'ubuntu', version: '16.04').converge(described_recipe) }
 
   before do
     stub_command("[ ! -z `docker ps -qaf 'name=busybox_ls$'` ]").and_return(false)
@@ -15,6 +15,8 @@ describe 'docker_test::container' do
     stub_command("[ ! -z `docker ps -qaf 'name=uber_options$'` ]").and_return(false)
     stub_command("[ ! -z `docker ps -qaf 'name=kill_after$'` ]").and_return(false)
     stub_command("[ ! -z `docker ps -qaf 'name=change_network_mode$'` ]").and_return(false)
+    stub_command('docker images | grep cmd_change').and_return(false)
+    stub_command('docker ps -a | grep cmd_change$').and_return(false)
   end
 
   context 'testing create action' do
@@ -37,7 +39,7 @@ describe 'docker_test::container' do
         network_disabled: false,
         outfile: nil,
         restart_maximum_retry_count: 0,
-        restart_policy: 'no',
+        restart_policy: nil,
         security_opts: nil,
         signal: 'SIGTERM',
         user: ''
@@ -124,7 +126,7 @@ describe 'docker_test::container' do
   context 'testing action :stop' do
     it 'run execute[hammer_time]' do
       expect(chef_run).to run_execute('hammer_time').with(
-        command:  'docker run --name hammer_time -d busybox sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
+        command: 'docker run --name hammer_time -d busybox sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
       )
     end
 
@@ -142,7 +144,7 @@ describe 'docker_test::container' do
 
     it 'run execute[red_light]' do
       expect(chef_run).to run_execute('red_light').with(
-        command:  'docker run --name red_light -d busybox sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
+        command: 'docker run --name red_light -d busybox sh -c "trap exit 0 SIGTERM; while :; do sleep 1; done"'
       )
     end
 
@@ -507,7 +509,7 @@ describe 'docker_test::container' do
         tag: '3.1',
         command: 'nc -ll -p 123 -e /bin/cat',
         port: '123',
-        restart_policy: 'always',
+        restart_policy: nil,
         restart_maximum_retry_count: 2
       )
     end
@@ -691,7 +693,7 @@ describe 'docker_test::container' do
         ulimits: [
           'nofile=40960:40960',
           'core=100000000:100000000',
-          'memlock=100000000:100000000'
+          'memlock=100000000:100000000',
         ]
       )
     end
@@ -745,7 +747,7 @@ describe 'docker_test::container' do
         ulimits: [
           'nofile=40960:40960',
           'core=100000000:100000000',
-          'memlock=100000000:100000000'
+          'memlock=100000000:100000000',
         ],
         labels: { 'foo' => 'bar', 'hello' => 'world' }
       )
@@ -807,7 +809,7 @@ describe 'docker_test::container' do
         repo: 'alpine',
         tag: '3.1',
         log_driver: 'syslog',
-        log_opts: { 'syslog-tag' => 'container-syslogger' }
+        log_opts: { 'tag' => 'container-syslogger' }
       )
     end
   end

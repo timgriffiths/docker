@@ -1,6 +1,6 @@
 # Two variables, one recipe.
 caname = 'docker_service_default'
-caroot = "/tmp/kitchen/#{caname}"
+caroot = "/ca/#{caname}"
 
 ################
 # action :create
@@ -540,7 +540,6 @@ docker_container 'reboot_survivor_retry' do
   tag '3.1'
   command 'nc -ll -p 123 -e /bin/cat'
   port '123'
-  restart_policy 'always'
   restart_maximum_retry_count 2
   action :run_if_missing
 end
@@ -767,7 +766,7 @@ docker_container 'ulimits' do
   ulimits [
     { 'Name' => 'nofile', 'Soft' => 40_960, 'Hard' => 40_960 },
     { 'Name' => 'core', 'Soft' => 100_000_000, 'Hard' => 100_000_000 },
-    { 'Name' => 'memlock', 'Soft' => 100_000_000, 'Hard' => 100_000_000 }
+    { 'Name' => 'memlock', 'Soft' => 100_000_000, 'Hard' => 100_000_000 },
   ]
   action :run
 end
@@ -823,7 +822,7 @@ docker_container 'uber_options' do
   ulimits [
     'nofile=40960:40960',
     'core=100000000:100000000',
-    'memlock=100000000:100000000'
+    'memlock=100000000:100000000',
   ]
   labels ['foo:bar', 'hello:world']
   action :run
@@ -907,7 +906,7 @@ docker_container 'syslogger' do
   repo 'alpine'
   tag '3.1'
   log_driver 'syslog'
-  log_opts 'syslog-tag=container-syslogger'
+  log_opts 'tag=container-syslogger'
   action :run_if_missing
 end
 
@@ -1009,4 +1008,74 @@ docker_container 'ro_rootfs' do
   command 'ps -ef'
   ro_rootfs true
   action :run_if_missing
+end
+
+##################
+# sysctl settings
+##################
+
+docker_container 'sysctls' do
+  repo 'alpine'
+  tag '3.1'
+  command '/sbin/sysctl -a'
+  sysctls 'net.core.somaxconn' => '65535',
+          'net.core.xfrm_acq_expires' => '42'
+  action :run_if_missing
+end
+
+########################
+# Dockerfile CMD changes
+########################
+
+directory '/usr/local/src/cmd_change_one' do
+  action :create
+end
+
+file '/usr/local/src/cmd_change_one/Dockerfile' do
+  content <<EOF
+FROM alpine:3.1
+CMD [ "nc", "-ll", "-p", "6", "-e", "/bin/cat" ]
+EOF
+  action :create
+end
+
+directory '/usr/local/src/cmd_change_two' do
+  action :create
+end
+
+file '/usr/local/src/cmd_change_two/Dockerfile' do
+  content <<EOF
+FROM alpine:3.1
+CMD [ "nc", "-ll", "-p", "9", "-e", "/bin/cat" ]
+EOF
+  action :create
+end
+
+execute 'build initial cmd_change image' do
+  command 'docker build -t cmd_change /usr/local/src/cmd_change_one'
+  not_if 'docker images | grep cmd_change'
+  action :run
+end
+
+execute 'run cmd_change' do
+  command 'docker run --name cmd_change -d --network=bridge cmd_change'
+  not_if 'docker ps -a | grep cmd_change$'
+  action :run
+end
+
+docker_container 'cmd_change' do
+  repo 'cmd_change'
+  action :run
+end
+
+docker_image 'cmd_change' do
+  tag 'latest'
+  action :build
+  source '/usr/local/src/cmd_change_two'
+  not_if { ::File.exist?('/marker_cmd_change') }
+  notifies :redeploy, 'docker_container[cmd_change]'
+end
+
+file '/marker_cmd_change' do
+  action :create
 end

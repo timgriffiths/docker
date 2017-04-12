@@ -132,6 +132,11 @@ describe command('docker network inspect -f "{{ .Containers }}" network_f') do
   its(:stdout) { should match 'echo-base-network_f' }
 end
 
+describe command('docker inspect -f "{{ .NetworkSettings.Networks.network_f.IPAddress }}" echo-base-network_f') do
+  its(:exit_status) { should eq 0 }
+  its(:stdout) { should match '172.28.5.5' }
+end
+
 ###########
 # network_g
 ###########
@@ -167,6 +172,25 @@ end
 describe command('docker network inspect -f "{{ .Containers }}" network_g') do
   its(:exit_status) { should eq 0 }
   its(:stdout) { should match 'echo-base-network_g' }
+end
+
+###########
+# network_h
+###########
+
+describe command("docker network ls -qf 'name=network_h1$'") do
+  its(:exit_status) { should eq 0 }
+  its(:stdout) { should_not be_empty }
+end
+
+describe command("docker network inspect -f '{{ range $c:=.Containers }}{{ $c.Name }}{{ end }}' network_h1") do
+  its(:exit_status) { should eq 0 }
+  its(:stdout) { should_not match 'container1-network_h' }
+end
+
+describe command("docker network inspect -f '{{ range $c:=.Containers }}{{ $c.Name }}{{ end }}' network_h2") do
+  its(:exit_status) { should eq 0 }
+  its(:stdout) { should match 'container1-network_h' }
 end
 
 # describe command('docker network inspect test-network') do
